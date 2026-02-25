@@ -10,21 +10,31 @@ processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 image = Image.open("Jeans.webp").convert("RGB")
 
 # Clothing labels you want to detect
-labels = [
-    "a white shirt",
-    "a black shirt",
-    "a long sleeve sweater",
-    "a hoodie",
-    "a jacket",
+types = [
+    "shirt",
+    "long sleeve sweater",
+    "hoodie",
+    "jacket",
     "jeans",
-    "black trousers",
+    "trousers",
     "skirt",
     "dress"
 ]
 
+colors = [
+    "Black",
+    "White",
+    "Red",
+    "Green",
+    "Blue",
+    "Purple",
+    "Orange",
+    "Yellow"
+]
+
 # Process inputs
 inputs = processor(
-    text=labels,
+    text=types + colors,
     images=image,
     return_tensors="pt",
     padding=True
@@ -38,11 +48,14 @@ with torch.no_grad():
 logits_per_image = outputs.logits_per_image
 probs = logits_per_image.softmax(dim=1)
 
-# Print results
-for label, prob in zip(labels, probs[0]):
-    print(f"{label:25s}: {prob.item():.2%}")
+# Print types results
+for type, prob in zip(types, probs[0]):
+    print(f"{type:25s}: {prob.item():.2%}")
+
+# Print colours results
+for color, prob in zip(colors, probs[0]):
+    print(f"{color:25s}: {prob.item():.2%}")
 
 # Best match
 best_idx = probs[0].argmax().item()
-print("\nDetected clothing:", labels[best_idx])
-print("done")
+print("\nDetected clothing:", colors[best_idx], types[best_idx])
