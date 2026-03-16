@@ -895,12 +895,12 @@
   const catEmojis = { top: '👕', bottom: '👖', dress: '👗', outerwear: '🧥', shoes: '👟', accessory: '👜' };
   const catLabels = { top: 'Top', bottom: 'Bottom', dress: 'Dress', outerwear: 'Outerwear', shoes: 'Shoes', accessory: 'Accessory' };
 
-  // SETUP DRAG & DROP FOR EACH CATEGORY ZONE
+  // Set up drag & drop for each category zone
   const categories = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'accessory'];
   categories.forEach(cat => {
     const zone = document.getElementById('zone-' + cat);
 
-    // Prevent browser default (opening file) on all drag events
+    // Prevent browser open file on drag events
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
       zone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); });
       document.body.addEventListener(evt, e => e.preventDefault());
@@ -916,7 +916,6 @@
     });
 
     zone.addEventListener('dragleave', e => {
-      // Only remove highlight if truly leaving the zone (not entering a child)
       const rect = zone.getBoundingClientRect();
       if (
         e.clientX < rect.left || e.clientX >= rect.right ||
@@ -930,7 +929,6 @@
       e.preventDefault();
       e.stopPropagation();
       zone.classList.remove('drag-over');
-      // Safari sometimes puts files in items instead of files
       let files = e.dataTransfer.files;
       if ((!files || !files.length) && e.dataTransfer.items) {
         const itemFiles = [];
@@ -960,7 +958,7 @@
       const reader = new FileReader();
       reader.onload = e => {
         const imageData = e.target.result;
-        // Check for duplicate — compare image data against existing clothes
+        // Check for duplicate
         const isDuplicate = clothes.some(c => c.image === imageData);
         if (!isDuplicate) {
           const item = {
@@ -998,7 +996,6 @@
     const duplicateIds = new Set();
     clothes.forEach(item => {
       if (!item.image) return;
-      // Use first 100 chars of base64 as a fast key
       const key = item.image.substring(0, 100);
       if (seen[key]) {
         duplicateIds.add(item.id);
@@ -1177,7 +1174,7 @@ function sanitize(str) {
     btn.classList.add('active');
   }
 
-  //TRANSFORMERS.JS MODEL SETUP
+  //Transfromers.js model set up
   async function loadModel() {
     const dot   = document.getElementById('model-dot');
     const label = document.getElementById('model-label');
@@ -1185,11 +1182,10 @@ function sanitize(str) {
     try {
       label.textContent = 'Downloading AI model…';
 
-      // Use a tiny text2text model — fast and runs fully in browser
       window.outfitGenerator = await pipeline(
         'text2text-generation',
         'Xenova/flan-t5-small',
-        { dtype: 'q8' }  // quantized = smaller download, faster
+        { dtype: 'q8' }
       );
 
       dot.classList.add('ready');
@@ -1199,22 +1195,20 @@ function sanitize(str) {
       console.error('Model load error:', e);
       dot.classList.add('error');
       label.textContent = 'AI unavailable — using smart scoring';
-      btn.disabled = false; // still allow generating with fallback
+      btn.disabled = false;
     }
   }
 
-  // Extract score and description from raw AI text response
+  // Extract score and description from AI response
   function extractAIInfo(text, index) {
     const lower = text.toLowerCase();
 
-    // Try to find a number score in the text
+    // Find number score in the text
     const scoreMatch = text.match(/\b([0-9]|10)\b/);
     const score = scoreMatch ? parseInt(scoreMatch[1]) : 7;
 
-    // Extract meaningful keywords for description
-    const positiveWords = ['elegant', 'chic', 'stylish', 'casual', 'smart',
-      'trendy', 'classic', 'bold', 'fresh', 'sleek', 'polished', 'modern',
-      'relaxed', 'sophisticated', 'cool', 'sharp', 'clean', 'effortless'];
+    // Extract keywords for description
+    const positiveWords = ['elegant', 'chic', 'stylish', 'casual', 'smart', 'trendy', 'classic', 'bold', 'fresh', 'sleek', 'polished', 'modern', 'relaxed', 'sophisticated', 'cool', 'sharp', 'clean', 'effortless', 'vintage', 'boho', 'indie', 'minimalist', 'cute', 'sporty', 'nostalgia'];
     const found = positiveWords.filter(w => lower.includes(w));
 
     const description = found.length > 0
@@ -1229,7 +1223,7 @@ function sanitize(str) {
     };
   }
 
-  // Keyword-based scoring fallback — no AI needed
+  // Keyword-based scoring fallback
   function scoreByKeywords(combo, occasion) {
     const categories = combo.pieces.map(p => p.category);
     const occasionScores = {
@@ -1338,7 +1332,6 @@ function sanitize(str) {
     try {
       if (!window.outfitGenerator) throw new Error('Model not ready');
 
-      // Run each outfit through the model one by one
       const top10 = combos.slice(0, 10);
       for (let i = 0; i < top10.length; i++) {
         const combo = top10[i];
@@ -1355,7 +1348,7 @@ function sanitize(str) {
       }
     } catch(e) {
       console.error('AI error:', e);
-      // Keyword-based fallback scoring — no AI needed
+      // Keyword-based fallback scoring
       combos.slice(0, 10).forEach((combo, i) => {
         aiDescriptions[i] = scoreByKeywords(combo, selectedOccasion);
       });
@@ -1414,8 +1407,6 @@ function sanitize(str) {
     setTimeout(() => t.classList.remove('show'), 2500);
   }
 
-
-  // Expose functions to global scope (required for type=module)
   window.handleFiles = handleFiles;
   window.removeDuplicates = removeDuplicates;
   window.deleteItem = deleteItem;
@@ -1426,7 +1417,7 @@ function sanitize(str) {
 
   // INIT
   updateAll();
-  loadModel(); // start downloading model in background
+  loadModel();
 </script>
 </body>
 </html>
