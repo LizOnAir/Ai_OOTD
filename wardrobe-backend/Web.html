@@ -665,20 +665,6 @@
     color: var(--ink2);
   }
 
-  /* LOADING SPINNER */
-  .spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255,255,255,0.4);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-    margin-right: 0.5rem;
-    vertical-align: middle;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
   /* STATS */
   .stats-bar {
     display: grid;
@@ -1054,24 +1040,18 @@
   }
 
   function saveClothes() {
-    try {
-      // Test if localStorage is available (Safari private mode blocks it)
-      localStorage.setItem('_test', '1');
-      localStorage.removeItem('_test');
-      // Save full data
-      localStorage.setItem('wardrobe_clothes', JSON.stringify(clothes));
-    } catch(e) {
-      // localStorage unavailable (Safari private mode) or quota exceeded
-      try {
-        // Try saving without images to reduce size
-        const light = clothes.map(c => ({...c, image: null}));
-        localStorage.setItem('wardrobe_clothes', JSON.stringify(light));
-      } catch(e2) {
-        // Silently fail — data lives in memory only this session
-        console.warn('Storage unavailable — data will not persist');
-      }
+  try {
+    const data = JSON.stringify(clothes);
+    localStorage.setItem('wardrobe_clothes', data);
+  } catch(e) {
+    console.error('Storage failed:', e);
+    if (e.name === 'QuotaExceededError') {
+      showToast('Storage full! Try removing some items.');
+    } else {
+      showToast('Could not save data locally.');
     }
   }
+}
 
   function loadClothes() {
     try {
@@ -1108,6 +1088,12 @@
     });
   }
 
+function sanitize(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
   function renderCloset() {
     const grid = document.getElementById('clothes-grid');
     const filtered = currentFilter === 'all' ? clothes : clothes.filter(c => c.category === currentFilter);
@@ -1126,19 +1112,19 @@
     const dupIds = findDuplicates();
 
     grid.innerHTML = filtered.map((item, i) => `
-      <div class="clothing-card ${dupIds.has(item.id) ? 'is-duplicate' : ''}" style="animation-delay:${i*0.05}s">
-        ${item.image
-          ? `<img class="card-img" src="${item.image}" alt="${item.name}">`
-          : `<div class="card-img-placeholder">${catEmojis[item.category]}</div>`}
-        ${dupIds.has(item.id) ? `<div class="dup-badge">Duplicate</div>` : ''}
-        <div class="card-info">
-          <div class="card-cat">${catLabels[item.category]}</div>
-          <div class="card-name">${item.name}</div>
-        </div>
-        <button class="card-delete" onclick="deleteItem(${item.id}, event)" title="Remove">✕</button>
+    <div class="clothing-card ${dupIds.has(item.id) ? 'is-duplicate' : ''}" style="animation-delay:${i*0.05}s">
+      ${item.image
+        ? `<img class="card-img" src="${item.image}" alt="${sanitize(item.name)}">`
+        : `<div class="card-img-placeholder">${catEmojis[item.category]}</div>`}
+      ${dupIds.has(item.id) ? `<div class="dup-badge">Duplicate</div>` : ''}
+      <div class="card-info">
+        <div class="card-cat">${catLabels[item.category]}</div>
+        <div class="card-name">${sanitize(item.name)}</div>
       </div>
-    `).join('');
-  }
+      <button class="card-delete" onclick="deleteItem(${item.id}, event)" title="Remove">✕</button>
+    </div>
+  `).join('');
+}
 
   function updateStats() {
     document.getElementById('stat-total').textContent = clothes.length;
@@ -1274,6 +1260,12 @@
   //GENERATE OUTFITS
 
   async function generateOutfits() {
+    const btn = document.getElementById('gen-btn');
+    btn.disabled = true;
+    btn.innerHTML = 'Generating…';
+
+    await new Promise(resolve => setTimeout(resolve, 50));
+
     const tops = clothes.filter(c => c.category === 'top');
     const bottoms = clothes.filter(c => c.category === 'bottom');
     const dresses = clothes.filter(c => c.category === 'dress');
@@ -1281,12 +1273,11 @@
     const outerwear = clothes.filter(c => c.category === 'outerwear');
     const accessories = clothes.filter(c => c.category === 'accessory');
 
+    btn.disabled = false;
+    btn.innerHTML = '✦ Generate Outfits';
+
     if (!tops.length && !dresses.length) { showToast('Add tops or dresses first!'); return; }
     if (!bottoms.length && !dresses.length) { showToast('Add bottoms or dresses first!'); return; }
-
-    const btn = document.getElementById('gen-btn');
-    btn.disabled = true;
-    btn.innerHTML = `<span class="spinner"></span>Generating…`;
 
     // Build all combinations
     let combos = [];
